@@ -67,11 +67,11 @@ def validate_many_models(model: Type[BaseModel], content: Any) -> List[BaseModel
         raise ManyModelValidationError(ve.errors())
 
 
-def validate_path_params(func: Callable, kwargs: dict) -> Tuple[dict, list]:
+def validate_path_params(func: Callable, kwargs: dict, ignore: List[str]) -> Tuple[dict, list]:
     errors = []
     validated = {}
     for name, type_ in func.__annotations__.items():
-        if name in {"query", "body", "form", "return"}:
+        if name in {"query", "body", "form", "return"} or name in ignore:
             continue
         try:
             adapter = TypeAdapter(type_)
@@ -168,14 +168,7 @@ def validate(
         @wraps(func)
         def wrapper(*args, **kwargs):
             q, b, f, err = None, None, None, {}
-            kwargs_without_ignore = {
-                k: v for k, v in kwargs.items() if k not in ignore
-            }
-            kwargs_without_ignore, path_err = validate_path_params(func, kwargs_without_ignore)
-            if len(ignore):
-                # Add ignored args back to kwargs so they are passed to the function
-                for i in ignore:
-                    kwargs_without_ignore[i] = kwargs.get(i)
+            kwargs, path_err = validate_path_params(func, kwargs, ignore)
             if path_err:
                 err["path_params"] = path_err
             query_in_kwargs = func.__annotations__.get("query")
