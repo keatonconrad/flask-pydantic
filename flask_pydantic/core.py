@@ -101,6 +101,7 @@ def validate(
     response_by_alias: bool = False,
     get_json_params: Optional[dict] = None,
     form: Optional[Type[BaseModel]] = None,
+    allow_extra: bool = False,
 ):
     """
     Decorator for route methods which will validate query, body and form parameters
@@ -122,6 +123,7 @@ def validate(
         (request.body_params then contains list of models i. e. List[BaseModel])
     `response_by_alias` whether Pydantic's alias is used
     `get_json_params` - parameters to be passed to Request.get_json() function
+    `allow_extra` - whether to allow extra args in the function signature
 
     example::
 
@@ -166,9 +168,10 @@ def validate(
         @wraps(func)
         def wrapper(*args, **kwargs):
             q, b, f, err = None, None, None, {}
-            kwargs, path_err = validate_path_params(func, kwargs)
-            if path_err:
-                err["path_params"] = path_err
+            if not allow_extra:
+                kwargs, path_err = validate_path_params(func, kwargs)
+                if path_err:
+                    err["path_params"] = path_err
             query_in_kwargs = func.__annotations__.get("query")
             query_model = query_in_kwargs or query
             if query_model:
